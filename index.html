@@ -33,6 +33,7 @@
     ];
 
     const SCENARIOS = [
+      { id: "donothing", name: "Do nothing", reduction: 0, cost: "0", timeline: "—", savedLives: 0, savedCost: "0", tag: "baseline", tagLabel: "Baseline" },
       { id: "diesel", name: "Ban diesel in city centre", reduction: 0.3, cost: "130M", timeline: "2 years", savedLives: 45, savedCost: "295M", tag: "most_efficient", tagLabel: "Most cost-efficient" },
       { id: "green", name: "Full green transport zone", reduction: 0.5, cost: "370M", timeline: "3–5 years", savedLives: 110, savedCost: "680M", tag: "recommended", tagLabel: "Recommended" },
       { id: "woodburn", name: "Phase out wood burning", reduction: 0.2, cost: "85M", timeline: "4 years", savedLives: 30, savedCost: "170M", tag: null, tagLabel: null },
@@ -428,7 +429,7 @@
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {SCENARIOS.map(s => {
                     const isSel = sc.id === s.id;
-                    const bc = isSel ? (s.tag === "recommended" ? "#16a34a" : (s.tag === "most_effective" ? "#6366f1" : (s.tag === "most_efficient" ? "#d97706" : "#111"))) : "#e5e5e0";
+                    const bc = isSel ? (s.tag === "recommended" ? "#16a34a" : (s.tag === "most_effective" ? "#6366f1" : (s.tag === "most_efficient" ? "#d97706" : (s.tag === "baseline" ? "#9ca3af" : "#111")))) : "#e5e5e0";
                     return (
                       <button key={s.id} onClick={() => setSelectedScenario(s)} style={{
                         background: isSel ? "#f7f7f5" : "#fff", border: `2px solid ${bc}`,
@@ -437,7 +438,7 @@
                       }}>
                         {s.tag && <span style={{
                           position: "absolute", top: -8, right: 10,
-                          background: s.tag === "recommended" ? "#16a34a" : (s.tag === "most_effective" ? "#6366f1" : "#d97706"),
+                          background: s.tag === "recommended" ? "#16a34a" : (s.tag === "most_effective" ? "#6366f1" : (s.tag === "most_efficient" ? "#d97706" : "#9ca3af")),
                           color: "#fff", fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3, textTransform: "uppercase"
                         }}>{s.tagLabel}</span>}
                         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{s.name}</div>
