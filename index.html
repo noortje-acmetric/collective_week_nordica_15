@@ -76,7 +76,7 @@
             height: "100%",
             transform: `scale(${scale})`,
             filter,
-            transition: "filter 0.4s",
+            transition: "filter 0.15s",
           }}
         />
       );
@@ -252,7 +252,7 @@
 
           {/* Lung cursor */}
           {isOnMap && !dragging.current && (() => {
-            const d = hovered ? damage : 0;
+            const d = hovered ? Math.min(1, Math.max(0, (hovered.pm25 * (1 - rf) - WHO) / 16)) : 0;
             return (
             <div style={{
               position: "absolute",
@@ -262,7 +262,7 @@
               pointerEvents: "none",
               zIndex: 2,
               filter: "none",
-              transition: "filter 0.3s, width 0.2s, height 0.2s"
+              transition: "filter 0.15s, width 0.15s, height 0.15s"
             }}>
               <LungSVG damage={d} breathPhase={breathPhase} />
             </div>
@@ -293,7 +293,7 @@
     }
 
     function App() {
-      const [screen, setScreen] = useState("explore");
+      const [screen, setScreen] = useState("landing");
       const [mouseScreen, setMouseScreen] = useState({ x: 0, y: 0 });
       const [hovered, setHovered] = useState(null);
       const [breathPhase, setBreathPhase] = useState(0);
@@ -326,6 +326,13 @@
         return () => window.removeEventListener("resize", measure);
       }, []);
 
+      useEffect(() => {
+        if (!outerRef.current) return;
+        const r = outerRef.current.getBoundingClientRect();
+        const sw = Math.floor(r.width * 0.30);
+        setDims({ w: Math.floor(r.width) - sw, h: Math.floor(r.height) });
+      }, [screen]);
+
       const curCenter = screen === "act" ? center2 : center1;
       const curZoom = screen === "act" ? zoom2 : zoom1;
       const ll = pixelToLatLng(mouseScreen.x, mouseScreen.y, curCenter.lat, curCenter.lng, curZoom, dims.w, dims.h);
@@ -341,6 +348,39 @@
       const totalHC = NEIGHBORHOODS.reduce((s, n) => s + n.healthCost, 0);
       const cardBg = "#f5f5f2";
 
+      if (screen === "landing") {
+        return (
+          <div style={{
+            height: "100vh", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            background: "#fafaf8", fontFamily: "'Inter',-apple-system,sans-serif",
+            color: "#111", overflow: "hidden",
+          }}>
+            <div style={{ textAlign: "center", maxWidth: 520, padding: "0 32px" }}>
+              <div style={{ fontSize: 11, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 600, marginBottom: 20 }}>Oslo · Air Quality</div>
+              <h1 style={{ fontSize: 56, fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", color: "#111", margin: 0, marginBottom: 24 }}>
+                What Oslo<br />breathes
+              </h1>
+              <p style={{ fontSize: 15, color: "#777", lineHeight: 1.7, marginBottom: 48, fontWeight: 400 }}>
+                Move through the city. See the air.<br />
+                Understand what it costs — in years and money.
+              </p>
+              <button
+                onClick={() => setScreen("explore")}
+                style={{
+                  background: "#111", color: "#fff", border: "none",
+                  borderRadius: 12, padding: "16px 40px",
+                  fontSize: 15, fontWeight: 600, cursor: "pointer",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                Explore the city →
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       if (screen === "explore") {
         return (
           <div ref={outerRef} style={{ height: "100vh", display: "flex", background: "#fafaf8", fontFamily: "'Inter',-apple-system,sans-serif", color: "#111", overflow: "hidden" }}>
@@ -353,7 +393,24 @@
               </div>
             </div>
             <div style={{ width: "30%", minWidth: 250, borderLeft: "1px solid #e8e8e4", background: "#fff", display: "flex", flexDirection: "column", overflowY: "auto" }}>
-              <div style={{ padding: "16px 16px 0" }}>
+
+              {/* Total cost — prominent at top */}
+              <div style={{ padding: 16, borderBottom: "1px solid #eee", background: "#111" }}>
+                <div style={{ fontSize: 9, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.13em", fontWeight: 600, marginBottom: 10 }}>Oslo — total cost of inaction</div>
+                <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
+                  <div>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: "#ef4444", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{totalHosp.toLocaleString()}</div>
+                    <div style={{ fontSize: 10, color: "#888", marginTop: 4 }}>hospital visits / year</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: "#f97316", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{totalHC}</div>
+                    <div style={{ fontSize: 10, color: "#888", marginTop: 4 }}>MNOK health cost / year</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hover details */}
+              <div style={{ padding: "12px 16px 0" }}>
                 <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3, fontWeight: 500 }}>{hovered ? hovered.name : "Hover a neighbourhood"}</div>
                 {hovered && <div style={{ fontSize: 11, color: "#888", marginBottom: 10 }}>{hovered.description}</div>}
               </div>
@@ -388,17 +445,24 @@
                 )}
               </div>
               <div style={{ marginTop: "auto", padding: 16 }}>
-                <div style={{ background: "#f0f0ec", borderRadius: 10, padding: 14, marginBottom: 10 }}>
-                  <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6, fontWeight: 500 }}>Oslo — total cost of inaction</div>
-                  <div style={{ display: "flex", gap: 16 }}>
-                    <div><div style={{ fontSize: 20, fontWeight: 700, color: "#dc2626" }}>{totalHosp.toLocaleString()}</div><div style={{ fontSize: 9, color: "#999" }}>hospital visits/yr</div></div>
-                    <div><div style={{ fontSize: 20, fontWeight: 700, color: "#d97706" }}>{totalHC} MNOK</div><div style={{ fontSize: 9, color: "#999" }}>health cost/yr</div></div>
+                <button
+                  onClick={() => { setScreen("act"); setSelectedScenario(SCENARIOS[1]); }}
+                  onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
+                  onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
+                  style={{
+                    width: "100%", border: "none", borderRadius: 12, cursor: "pointer",
+                    padding: "18px 16px", textAlign: "left",
+                    background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                    boxShadow: "0 4px 16px rgba(22,163,74,0.35)",
+                    transition: "transform 0.15s, box-shadow 0.15s",
+                  }}
+                >
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Ready to change this?</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>What if you act now?</div>
+                    <div style={{ fontSize: 22, color: "#fff" }}>→</div>
                   </div>
-                </div>
-                <button onClick={() => { setScreen("act"); setSelectedScenario(SCENARIOS[1]); }} style={{
-                  width: "100%", background: "#111", color: "#fff", border: "none", borderRadius: 10,
-                  padding: "14px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer"
-                }}>What if you act now? →</button>
+                </button>
               </div>
             </div>
           </div>
@@ -422,6 +486,30 @@
               }}>← Back to current state</button>
             </div>
             <div style={{ width: "30%", minWidth: 250, borderLeft: "1px solid #e8e8e4", background: "#fff", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+
+              {/* Impact header — prominent at top when hovering */}
+              <div style={{ padding: 16, borderBottom: "1px solid #eee", background: "#111", minHeight: 90 }}>
+                {hovered ? (
+                  <>
+                    <div style={{ fontSize: 9, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.13em", fontWeight: 600, marginBottom: 10 }}>{hovered.name} — with this action</div>
+                    <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
+                      <div>
+                        <div style={{ fontSize: 36, fontWeight: 800, color: adjLY > 1 ? "#ef4444" : (adjLY > 0.5 ? "#f97316" : "#4ade80"), fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>−{adjLY.toFixed(1)}</div>
+                        <div style={{ fontSize: 10, color: "#888", marginTop: 4 }}>years life expectancy</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 36, fontWeight: 800, color: "#f97316", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{adjHC.toFixed(0)}</div>
+                        <div style={{ fontSize: 10, color: "#888", marginTop: 4 }}>MNOK health cost / year</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", height: 58 }}>
+                    <div style={{ fontSize: 13, color: "#555" }}>Hover a neighbourhood to see its impact</div>
+                  </div>
+                )}
+              </div>
+
               <div style={{ padding: 16 }}>
                 <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3, fontWeight: 500 }}>Choose a path forward</div>
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#222" }}>Select a scenario to see its impact</div>
@@ -452,23 +540,6 @@
                   })}
                 </div>
               </div>
-              {hovered && (
-                <div style={{ padding: "0 16px 10px" }}>
-                  <div style={{ background: cardBg, borderRadius: 10, padding: 12 }}>
-                    <div style={{ fontSize: 9, color: "#999", marginBottom: 4, fontWeight: 500 }}>{hovered.name} — with this action</div>
-                    <div style={{ display: "flex", gap: 16, alignItems: "baseline" }}>
-                      <div>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: adjLY > 1 ? "#dc2626" : (adjLY > 0.5 ? "#d97706" : "#16a34a"), fontVariantNumeric: "tabular-nums" }}>−{adjLY.toFixed(1)}<span style={{ fontSize: 10, color: "#999", fontWeight: 400 }}> yrs</span></div>
-                        <div style={{ fontSize: 9, color: "#999" }}>life expectancy</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: "#d97706", fontVariantNumeric: "tabular-nums" }}>{adjHC.toFixed(0)}<span style={{ fontSize: 10, color: "#999", fontWeight: 400 }}> MNOK</span></div>
-                        <div style={{ fontSize: 9, color: "#999" }}>health cost</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
               <div style={{ marginTop: "auto", padding: "0 16px 12px" }}>
                 <div style={{ fontSize: 9, color: "#bbb", lineHeight: 1.5, paddingTop: 10, borderTop: "1px solid #eee" }}>
                   Prototype · illustrative data · Real deployment uses live monitoring, FHI registries, SSB demographics.
