@@ -33,11 +33,74 @@
     ];
 
     const SCENARIOS = [
-      { id: "donothing", name: "Do nothing", reduction: 0, cost: "0", timeline: "—", savedLives: 0, savedCost: "0", tag: "baseline", tagLabel: "Baseline" },
-      { id: "diesel", name: "Ban diesel in city centre", reduction: 0.3, cost: "130M", timeline: "2 years", savedLives: 45, savedCost: "295M", tag: "most_efficient", tagLabel: "Most cost-efficient" },
-      { id: "green", name: "Full green transport zone", reduction: 0.5, cost: "370M", timeline: "3–5 years", savedLives: 110, savedCost: "680M", tag: "recommended", tagLabel: "Recommended" },
-      { id: "woodburn", name: "Phase out wood burning", reduction: 0.2, cost: "85M", timeline: "4 years", savedLives: 30, savedCost: "170M", tag: null, tagLabel: null },
-      { id: "who", name: "Full WHO compliance plan", reduction: 0.7, cost: "850M", timeline: "8–10 years", savedLives: 185, savedCost: "1.2B", tag: "most_effective", tagLabel: "Most effective" },
+      {
+        id: "diesel", name: "Ban diesel in city centre", reduction: 0.3, cost: "130M", timeline: "2 years",
+        savedLives: 45, savedCost: "295M", tag: "most_efficient", tagLabel: "Most cost-efficient",
+        summary: "Prohibiting diesel vehicles from the city centre ring road reduces PM2.5 concentrations by an estimated 30%, based on observed outcomes from comparable urban restrictions in London, Brussels and Stockholm.",
+        mechanism: "Diesel combustion produces PM2.5 particles at 5–10× the rate of modern petrol and EV alternatives. Restricting access eliminates the dominant source of roadside particulate matter in dense urban corridors.",
+        confidence: "High",
+        confidenceNote: "Multiple comparable cities have implemented Low Emission Zones since 2010. Oslo's traffic mix, road density, and meteorological conditions are well-modelled by NILU.",
+        populations: ["Children under 10 (developing lungs)", "Elderly with cardiovascular conditions", "Residents along Ringveien and Ring 2", "Outdoor workers"],
+        cobenefits: ["−18% urban NO₂ levels", "−12 dB average road noise", "−9% CO₂ from transport sector"],
+        risks: ["Traffic displacement to E6/E18 ring roads", "Enforcement cost estimated at 15M NOK/year", "Moderate political resistance from freight operators"],
+        sources: [
+          { label: "WHO Air Quality Guidelines 2021", ref: "WHO/HEP/ECH/AQH/2021.01" },
+          { label: "FHI Report: Health Effects of Traffic Pollution in Oslo", ref: "FHI IS-3021, 2022" },
+          { label: "NILU Technical Report: PM2.5 Source Apportionment Oslo", ref: "NILU TR 5/2023" },
+          { label: "Transport for London: ULEZ Impact Assessment", ref: "TfL Report, 2023" },
+        ],
+      },
+      {
+        id: "green", name: "Full green transport zone", reduction: 0.5, cost: "370M", timeline: "3–5 years",
+        savedLives: 110, savedCost: "680M", tag: "recommended", tagLabel: "Recommended",
+        summary: "A zero-emission transport zone covering the inner city — all combustion vehicles replaced by electric, hydrogen, or human-powered alternatives — is modelled to halve PM2.5 in the affected area. Based on Copenhagen and Amsterdam transition studies.",
+        mechanism: "Eliminating all combustion engines removes both direct PM2.5 emissions and secondary particle formation from NOₓ reactions. The 50% reduction accounts for residual tyre and brake wear particulates, which persist regardless of fuel type.",
+        confidence: "High",
+        confidenceNote: "Copenhagen's full cycling infrastructure transition (2010–2022) and Amsterdam's emission zone data provide strong empirical grounding. Oslo's urban density is comparable.",
+        populations: ["All inner-city residents (est. 85,000)", "School-age children in 23 affected schools", "Hospital patients at Ullevål and Rikshospitalet", "Tourists and daily commuters"],
+        cobenefits: ["−45% CO₂ from inner-city transport", "−22 dB ambient noise reduction", "Increased cycling uptake, −8% obesity-related hospitalisations", "Significant urban heat island reduction"],
+        risks: ["3–5 year transition disruption to businesses", "Charging infrastructure investment not included in cost estimate", "Equity concerns: lower-income workers may face longer commutes"],
+        sources: [
+          { label: "Nordic Council: Zero-Emission Urban Zones", ref: "Nordic Council Report 2023:04" },
+          { label: "Oslo Climate Budget 2024", ref: "Oslo Kommune, 2024" },
+          { label: "TU Delft: Amsterdam LEZ Health Outcomes", ref: "TU Delft Report, 2022" },
+          { label: "Lancet Countdown on Health and Climate Change", ref: "Lancet, Vol. 402, 2023" },
+        ],
+      },
+      {
+        id: "woodburn", name: "Phase out wood burning", reduction: 0.2, cost: "85M", timeline: "4 years",
+        savedLives: 30, savedCost: "170M", tag: null, tagLabel: null,
+        summary: "Wood burning accounts for approximately 40% of Oslo's PM2.5 during winter months. A phased ban with subsidised heat pump conversion would reduce annual average PM2.5 by 20%, with significantly higher impact in residential neighbourhoods.",
+        mechanism: "Residential wood combustion releases fine particles, polycyclic aromatic hydrocarbons (PAH), and black carbon directly into breathing height. Unlike traffic, emissions occur during nighttime temperature inversions when dispersion is minimal.",
+        confidence: "Medium",
+        confidenceNote: "The health model is robust, but 20% reduction assumes 80% compliance. Actual uptake depends heavily on subsidy design and public communication. NILU's winter monitoring underpins the baseline.",
+        populations: ["Residents within 200m of high wood-burning density areas", "Children in residential neighbourhoods", "Elderly with respiratory conditions", "Bjerke and Søndre Nordstrand disproportionately affected"],
+        cobenefits: ["−35% winter-peak PM2.5 spikes", "Lower household fire risk", "−18% black carbon deposition in local ecosystems"],
+        risks: ["Cultural attachment to wood stoves (strong public resistance anticipated)", "Lower-income households rely on wood as cheap heat source — subsidy design is critical", "4-year timeline assumes rapid permit and installer capacity"],
+        sources: [
+          { label: "NILU: Residential Wood Burning Oslo — Winter Monitoring", ref: "NILU OR 12/2023" },
+          { label: "FHI: Exposure Assessment Wood Smoke PM2.5", ref: "FHI Report IS-3018, 2021" },
+          { label: "Norwegian Environment Agency: Biomass Combustion Inventory", ref: "M-2245, 2023" },
+          { label: "EEA: Residential Heating and Air Quality", ref: "EEA Report 18/2022" },
+        ],
+      },
+      {
+        id: "who", name: "Full WHO compliance plan", reduction: 0.7, cost: "850M", timeline: "8–10 years",
+        savedLives: 185, savedCost: "1.2B", tag: "most_effective", tagLabel: "Most effective",
+        summary: "Bringing Oslo fully into compliance with WHO 2021 PM2.5 guidelines (5 µg/m³ annual mean) requires a comprehensive multi-source strategy combining all other scenarios plus industrial emission controls and urban greening. This is the only scenario that eliminates the air quality health gap entirely.",
+        mechanism: "The WHO 2021 guidelines represent the threshold below which no measurable chronic health effect from PM2.5 has been observed in large cohort studies. Reaching this standard requires simultaneously addressing traffic, biomass, industrial and secondary aerosol formation.",
+        confidence: "Medium",
+        confidenceNote: "The 70% reduction is achievable based on modelling, but depends on sustained policy implementation across three or more electoral cycles. Helsingborg (Sweden) achieved WHO compliance in 2021 after a 12-year programme.",
+        populations: ["All 700,000+ Oslo residents benefit", "Greatest relative gain in Groruddalen, Alnabru, Grønland", "Unborn children — prenatal PM2.5 exposure linked to low birth weight", "People with genetic cardiovascular susceptibility"],
+        cobenefits: ["Full alignment with EU Clean Air Directive 2035 targets", "−55% CO₂ from covered sectors", "Estimated 420 fewer premature deaths over 10 years", "Significant reduction in dementia incidence (emerging evidence)"],
+        risks: ["Requires political continuity across 2–3 governments", "Industrial controls may face legal challenges", "Cost estimate excludes land-use change and urban forestry"],
+        sources: [
+          { label: "WHO Global Air Quality Guidelines 2021", ref: "WHO/HEP/ECH/AQH/2021.01" },
+          { label: "Lancet: Global burden of disease attributable to PM2.5", ref: "Lancet, Vol. 396, 2020" },
+          { label: "EEA: Air Quality in Europe 2023", ref: "EEA Report 07/2023" },
+          { label: "Norwegian Climate Action Plan 2030", ref: "Meld. St. 13, 2021–22" },
+        ],
+      },
     ];
 
     const WHO = 5;
@@ -77,7 +140,7 @@
             height: "100%",
             transform: `scale(${scale})`,
             filter,
-            transition: "filter 0.4s",
+            transition: "filter 0.15s",
           }}
         />
       );
@@ -253,7 +316,7 @@
 
           {/* Lung cursor */}
           {isOnMap && !dragging.current && (() => {
-            const d = hovered ? damage : 0;
+            const d = hovered ? Math.min(1, Math.max(0, (hovered.pm25 * (1 - rf) - WHO) / 16)) : 0;
             return (
             <div style={{
               position: "absolute",
@@ -263,7 +326,7 @@
               pointerEvents: "none",
               zIndex: 2,
               filter: "none",
-              transition: "filter 0.3s, width 0.2s, height 0.2s"
+              transition: "filter 0.15s, width 0.15s, height 0.15s"
             }}>
               <LungSVG damage={d} breathPhase={breathPhase} />
             </div>
@@ -294,12 +357,13 @@
     }
 
     function App() {
-      const [screen, setScreen] = useState("explore");
+      const [screen, setScreen] = useState("landing");
       const [mouseScreen, setMouseScreen] = useState({ x: 0, y: 0 });
       const [hovered, setHovered] = useState(null);
       const [breathPhase, setBreathPhase] = useState(0);
       const [isOnMap, setIsOnMap] = useState(false);
       const [selectedScenario, setSelectedScenario] = useState(null);
+      const [detailScenario, setDetailScenario] = useState(null);
       const [center1, setCenter1] = useState({ lat: 59.915, lng: 10.76 });
       const [zoom1, setZoom1] = useState(12);
       const [center2, setCenter2] = useState({ lat: 59.915, lng: 10.76 });
@@ -327,6 +391,13 @@
         return () => window.removeEventListener("resize", measure);
       }, []);
 
+      useEffect(() => {
+        if (!outerRef.current) return;
+        const r = outerRef.current.getBoundingClientRect();
+        const sw = Math.floor(r.width * 0.30);
+        setDims({ w: Math.floor(r.width) - sw, h: Math.floor(r.height) });
+      }, [screen]);
+
       const curCenter = screen === "act" ? center2 : center1;
       const curZoom = screen === "act" ? zoom2 : zoom1;
       const ll = pixelToLatLng(mouseScreen.x, mouseScreen.y, curCenter.lat, curCenter.lng, curZoom, dims.w, dims.h);
@@ -342,6 +413,39 @@
       const totalHC = NEIGHBORHOODS.reduce((s, n) => s + n.healthCost, 0);
       const cardBg = "#f5f5f2";
 
+      if (screen === "landing") {
+        return (
+          <div style={{
+            height: "100vh", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            background: "#fafaf8", fontFamily: "'Inter',-apple-system,sans-serif",
+            color: "#111", overflow: "hidden",
+          }}>
+            <div style={{ textAlign: "center", maxWidth: 520, padding: "0 32px" }}>
+              <div style={{ fontSize: 11, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 600, marginBottom: 20 }}>Oslo · Air Quality</div>
+              <h1 style={{ fontSize: 56, fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", color: "#111", margin: 0, marginBottom: 24 }}>
+                What Oslo<br />breathes
+              </h1>
+              <p style={{ fontSize: 15, color: "#777", lineHeight: 1.7, marginBottom: 48, fontWeight: 400 }}>
+                Move through the city. See the air.<br />
+                Understand what it costs — in years and money.
+              </p>
+              <button
+                onClick={() => setScreen("explore")}
+                style={{
+                  background: "#111", color: "#fff", border: "none",
+                  borderRadius: 12, padding: "16px 40px",
+                  fontSize: 15, fontWeight: 600, cursor: "pointer",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                Explore the city →
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       if (screen === "explore") {
         return (
           <div ref={outerRef} style={{ height: "100vh", display: "flex", background: "#fafaf8", fontFamily: "'Inter',-apple-system,sans-serif", color: "#111", overflow: "hidden" }}>
@@ -354,52 +458,82 @@
               </div>
             </div>
             <div style={{ width: "30%", minWidth: 250, borderLeft: "1px solid #e8e8e4", background: "#fff", display: "flex", flexDirection: "column", overflowY: "auto" }}>
-              <div style={{ padding: "16px 16px 0" }}>
+
+              {/* Total cost — prominent at top */}
+              <div style={{ padding: 16, borderBottom: "1px solid #eee", background: "#111" }}>
+                <div style={{ fontSize: 9, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.13em", fontWeight: 600, marginBottom: 2 }}>Oslo — cost of doing nothing</div>
+                <div style={{ fontSize: 10, color: "#555", marginBottom: 10 }}>These numbers repeat every single year</div>
+                <div style={{ display: "flex", gap: 20, alignItems: "flex-end", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: "#ef4444", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{totalHosp.toLocaleString()}</div>
+                    <div style={{ fontSize: 10, color: "#888", marginTop: 3 }}>hospital visits this year</div>
+                    <div style={{ fontSize: 10, color: "#555", marginTop: 1 }}>≈ {Math.round(totalHosp / 365)} per day, air-related</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: "#f97316", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{totalHC}</div>
+                    <div style={{ fontSize: 10, color: "#888", marginTop: 3 }}>MNOK spent this year</div>
+                    <div style={{ fontSize: 10, color: "#555", marginTop: 1 }}>= {(totalHC * 10).toLocaleString()} MNOK over 10 years</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hover details */}
+              <div style={{ padding: "12px 16px 0" }}>
                 <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3, fontWeight: 500 }}>{hovered ? hovered.name : "Hover a neighbourhood"}</div>
                 {hovered && <div style={{ fontSize: 11, color: "#888", marginBottom: 10 }}>{hovered.description}</div>}
               </div>
               <div style={{ padding: "0 16px", display: "flex", flexDirection: "column", gap: 6 }}>
                 <div style={{ background: cardBg, borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 9, color: "#999", fontWeight: 500 }}>Life expectancy impact</div>
-                  <div style={{ fontSize: 32, fontWeight: 700, marginTop: 2, color: currentLY > 1 ? "#dc2626" : (currentLY > 0.5 ? "#d97706" : "#16a34a"), fontVariantNumeric: "tabular-nums" }}>
+                  <div style={{ fontSize: 9, color: "#999", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>Life expectancy — permanent loss</div>
+                  <div style={{ fontSize: 32, fontWeight: 700, marginTop: 4, color: currentLY > 1 ? "#dc2626" : (currentLY > 0.5 ? "#d97706" : "#16a34a"), fontVariantNumeric: "tabular-nums" }}>
                     −{currentLY.toFixed(1)} <span style={{ fontSize: 12, color: "#999", fontWeight: 400 }}>years</span>
                   </div>
-                  <div style={{ fontSize: 10, color: "#aaa", marginTop: 1 }}>Average life shortened by this air</div>
+                  <div style={{ fontSize: 11, color: "#666", marginTop: 3 }}>= {Math.round(currentLY * 12)} months cut from your life</div>
+                  <div style={{ fontSize: 10, color: "#aaa", marginTop: 2 }}>Compared to living in clean WHO-standard air</div>
                 </div>
                 <div style={{ background: cardBg, borderRadius: 10, padding: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <div style={{ fontSize: 9, color: "#999", fontWeight: 500 }}>Annual health costs</div>
-                    {hovered && <div style={{ fontSize: 9, color: "#bbb" }}>{hovered.name}</div>}
+                  <div style={{ fontSize: 9, color: "#999", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>Health cost — this area, per year</div>
+                  <div style={{ fontSize: 32, fontWeight: 700, marginTop: 4, color: "#d97706", fontVariantNumeric: "tabular-nums" }}>
+                    {currentHC.toFixed(0)} <span style={{ fontSize: 12, color: "#999", fontWeight: 400 }}>MNOK / year</span>
                   </div>
-                  <div style={{ fontSize: 32, fontWeight: 700, marginTop: 2, color: "#d97706", fontVariantNumeric: "tabular-nums" }}>
-                    {currentHC.toFixed(0)} <span style={{ fontSize: 12, color: "#999", fontWeight: 400 }}>MNOK</span>
-                  </div>
-                  <div style={{ fontSize: 10, color: "#aaa", marginTop: 1 }}>Hospital visits, treatment, lost productivity</div>
+                  {hovered && <div style={{ fontSize: 11, color: "#666", marginTop: 3 }}>= {Math.round(hovered.healthCost * 1_000_000 / hovered.pop).toLocaleString()} kr per resident per year</div>}
+                  <div style={{ fontSize: 10, color: "#aaa", marginTop: 2 }}>Hospitals, treatment, lost workdays</div>
                 </div>
                 {hovered && (
                   <div style={{ background: cardBg, borderRadius: 10, padding: 14 }}>
-                    <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8, fontWeight: 500 }}>Who lives in {hovered.name}</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                      <div><div style={{ fontSize: 18, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{(hovered.pop / 1000).toFixed(0)}k</div><div style={{ fontSize: 9, color: "#999" }}>residents</div></div>
-                      <div><div style={{ fontSize: 18, fontWeight: 600, color: "#d97706", fontVariantNumeric: "tabular-nums" }}>{(hovered.children / 1000).toFixed(1)}k</div><div style={{ fontSize: 9, color: "#999" }}>children</div></div>
-                      <div><div style={{ fontSize: 18, fontWeight: 600, color: "#dc2626", fontVariantNumeric: "tabular-nums" }}>{hovered.hospVisits}</div><div style={{ fontSize: 9, color: "#999" }}>hospital visits/yr</div></div>
-                      <div><div style={{ fontSize: 18, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{(hovered.elderly / 1000).toFixed(1)}k</div><div style={{ fontSize: 9, color: "#999" }}>elderly (65+)</div></div>
+                    <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8, fontWeight: 500 }}>Who breathes this air in {hovered.name}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <div><div style={{ fontSize: 18, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{(hovered.pop / 1000).toFixed(0)}k</div><div style={{ fontSize: 9, color: "#999" }}>total residents</div></div>
+                      <div><div style={{ fontSize: 18, fontWeight: 600, color: "#d97706", fontVariantNumeric: "tabular-nums" }}>{(hovered.children / 1000).toFixed(1)}k</div><div style={{ fontSize: 9, color: "#999" }}>children — most vulnerable</div></div>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 600, color: "#dc2626", fontVariantNumeric: "tabular-nums" }}>{hovered.hospVisits}</div>
+                        <div style={{ fontSize: 9, color: "#999" }}>hospital visits / year</div>
+                        <div style={{ fontSize: 9, color: "#dc2626" }}>1 in {Math.round(hovered.pop / hovered.hospVisits)} residents</div>
+                      </div>
+                      <div><div style={{ fontSize: 18, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{(hovered.elderly / 1000).toFixed(1)}k</div><div style={{ fontSize: 9, color: "#999" }}>elderly (65+) at risk</div></div>
                     </div>
                   </div>
                 )}
               </div>
               <div style={{ marginTop: "auto", padding: 16 }}>
-                <div style={{ background: "#f0f0ec", borderRadius: 10, padding: 14, marginBottom: 10 }}>
-                  <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6, fontWeight: 500 }}>Oslo — total cost of inaction</div>
-                  <div style={{ display: "flex", gap: 16 }}>
-                    <div><div style={{ fontSize: 20, fontWeight: 700, color: "#dc2626" }}>{totalHosp.toLocaleString()}</div><div style={{ fontSize: 9, color: "#999" }}>hospital visits/yr</div></div>
-                    <div><div style={{ fontSize: 20, fontWeight: 700, color: "#d97706" }}>{totalHC} MNOK</div><div style={{ fontSize: 9, color: "#999" }}>health cost/yr</div></div>
+                <button
+                  onClick={() => { setScreen("act"); setSelectedScenario(SCENARIOS[1]); }}
+                  onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
+                  onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
+                  style={{
+                    width: "100%", border: "none", borderRadius: 12, cursor: "pointer",
+                    padding: "18px 16px", textAlign: "left",
+                    background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                    boxShadow: "0 4px 16px rgba(22,163,74,0.35)",
+                    transition: "transform 0.15s, box-shadow 0.15s",
+                  }}
+                >
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Ready to change this?</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>What if you act now?</div>
+                    <div style={{ fontSize: 22, color: "#fff" }}>→</div>
                   </div>
-                </div>
-                <button onClick={() => { setScreen("act"); setSelectedScenario(SCENARIOS[1]); }} style={{
-                  width: "100%", background: "#111", color: "#fff", border: "none", borderRadius: 10,
-                  padding: "14px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer"
-                }}>What if you act now? →</button>
+                </button>
               </div>
             </div>
           </div>
@@ -409,6 +543,7 @@
       if (screen === "act") {
         const sc = selectedScenario || SCENARIOS[1];
         return (
+          <>
           <div ref={outerRef} style={{ height: "100vh", display: "flex", background: "#fafaf8", fontFamily: "'Inter',-apple-system,sans-serif", color: "#111", overflow: "hidden" }}>
             <div style={{ flex: 1, position: "relative" }}>
               <MapView mouseScreen={mouseScreen} setMouseScreen={setMouseScreen} isOnMap={isOnMap} setIsOnMap={setIsOnMap} hovered={hovered} setHovered={setHovered} damage={damage} breathPhase={breathPhase} rf={sc.reduction} center={center2} setCenter={setCenter2} zoom={zoom2} setZoom={setZoom2} containerRef={containerRef2} w={dims.w} h={dims.h} />
@@ -423,6 +558,33 @@
               }}>← Back to current state</button>
             </div>
             <div style={{ width: "30%", minWidth: 250, borderLeft: "1px solid #e8e8e4", background: "#fff", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+
+              {/* Impact header — prominent at top when hovering */}
+              <div style={{ padding: 16, borderBottom: "1px solid #eee", background: "#111", minHeight: 90 }}>
+                {hovered ? (
+                  <>
+                    <div style={{ fontSize: 9, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.13em", fontWeight: 600, marginBottom: 2 }}>{hovered.name} — after this action</div>
+                    <div style={{ fontSize: 10, color: "#555", marginBottom: 10 }}>Compared to doing nothing today</div>
+                    <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
+                      <div>
+                        <div style={{ fontSize: 36, fontWeight: 800, color: adjLY > 1 ? "#ef4444" : (adjLY > 0.5 ? "#f97316" : "#4ade80"), fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>−{adjLY.toFixed(1)}</div>
+                        <div style={{ fontSize: 10, color: "#888", marginTop: 3 }}>years lost per person</div>
+                        <div style={{ fontSize: 10, color: "#4ade80", marginTop: 1 }}>+{Math.round((currentLY - adjLY) * 12)} months saved vs now</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 36, fontWeight: 800, color: "#f97316", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{adjHC.toFixed(0)}</div>
+                        <div style={{ fontSize: 10, color: "#888", marginTop: 3 }}>MNOK / year remaining</div>
+                        <div style={{ fontSize: 10, color: "#4ade80", marginTop: 1 }}>{(currentHC - adjHC).toFixed(0)} MNOK saved per year</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", height: 80 }}>
+                    <div style={{ fontSize: 13, color: "#555" }}>Hover a neighbourhood to see its impact</div>
+                  </div>
+                )}
+              </div>
+
               <div style={{ padding: 16 }}>
                 <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3, fontWeight: 500 }}>Choose a path forward</div>
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#222" }}>Select a scenario to see its impact</div>
@@ -441,35 +603,25 @@
                           background: s.tag === "recommended" ? "#16a34a" : (s.tag === "most_effective" ? "#6366f1" : (s.tag === "most_efficient" ? "#d97706" : "#9ca3af")),
                           color: "#fff", fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3, textTransform: "uppercase"
                         }}>{s.tagLabel}</span>}
-                        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{s.name}</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, flex: 1, paddingRight: 6 }}>{s.name}</div>
+                          <button
+                            onClick={e => { e.stopPropagation(); setDetailScenario(s); }}
+                            style={{ background: "#f0f0ec", border: "none", borderRadius: 20, width: 20, height: 20, fontSize: 11, cursor: "pointer", color: "#666", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}
+                            title="View research details"
+                          >i</button>
+                        </div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-                          <div><div style={{ fontSize: 16, fontWeight: 700, color: "#16a34a" }}>{s.savedLives}</div><div style={{ fontSize: 9, color: "#999" }}>lives saved/yr</div></div>
-                          <div><div style={{ fontSize: 16, fontWeight: 700, color: "#d97706" }}>{s.savedCost} NOK</div><div style={{ fontSize: 9, color: "#999" }}>healthcare saved</div></div>
-                          <div><div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{s.cost} NOK</div><div style={{ fontSize: 9, color: "#999" }}>investment</div></div>
-                          <div><div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{s.timeline}</div><div style={{ fontSize: 9, color: "#999" }}>to implement</div></div>
+                          <div><div style={{ fontSize: 16, fontWeight: 700, color: "#16a34a" }}>{s.savedLives}</div><div style={{ fontSize: 9, color: "#999" }}>lives saved every year</div></div>
+                          <div><div style={{ fontSize: 16, fontWeight: 700, color: "#16a34a" }}>{s.savedCost} NOK</div><div style={{ fontSize: 9, color: "#999" }}>healthcare saved / year</div></div>
+                          <div><div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{s.cost} NOK</div><div style={{ fontSize: 9, color: "#999" }}>one-time investment</div></div>
+                          <div><div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{s.timeline}</div><div style={{ fontSize: 9, color: "#999" }}>until full effect</div></div>
                         </div>
                       </button>
                     );
                   })}
                 </div>
               </div>
-              {hovered && (
-                <div style={{ padding: "0 16px 10px" }}>
-                  <div style={{ background: cardBg, borderRadius: 10, padding: 12 }}>
-                    <div style={{ fontSize: 9, color: "#999", marginBottom: 4, fontWeight: 500 }}>{hovered.name} — with this action</div>
-                    <div style={{ display: "flex", gap: 16, alignItems: "baseline" }}>
-                      <div>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: adjLY > 1 ? "#dc2626" : (adjLY > 0.5 ? "#d97706" : "#16a34a"), fontVariantNumeric: "tabular-nums" }}>−{adjLY.toFixed(1)}<span style={{ fontSize: 10, color: "#999", fontWeight: 400 }}> yrs</span></div>
-                        <div style={{ fontSize: 9, color: "#999" }}>life expectancy</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: "#d97706", fontVariantNumeric: "tabular-nums" }}>{adjHC.toFixed(0)}<span style={{ fontSize: 10, color: "#999", fontWeight: 400 }}> MNOK</span></div>
-                        <div style={{ fontSize: 9, color: "#999" }}>health cost</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
               <div style={{ marginTop: "auto", padding: "0 16px 12px" }}>
                 <div style={{ fontSize: 9, color: "#bbb", lineHeight: 1.5, paddingTop: 10, borderTop: "1px solid #eee" }}>
                   Prototype · illustrative data · Real deployment uses live monitoring, FHI registries, SSB demographics.
@@ -477,8 +629,123 @@
               </div>
             </div>
           </div>
+          {detailScenario && (() => {
+            const s = detailScenario;
+            const accentColor = s.tag === "recommended" ? "#16a34a" : s.tag === "most_effective" ? "#6366f1" : s.tag === "most_efficient" ? "#d97706" : "#111";
+            return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+            onClick={() => setDetailScenario(null)}>
+            <div style={{ background: "#fff", borderRadius: 16, maxWidth: 620, width: "100%", maxHeight: "88vh", overflowY: "auto", boxShadow: "0 24px 80px rgba(0,0,0,0.3)" }}
+              onClick={e => e.stopPropagation()}>
+
+              {/* Header */}
+              <div style={{ padding: "24px 28px 20px", borderBottom: "1px solid #eee", position: "sticky", top: 0, background: "#fff", zIndex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    {s.tag && <div style={{ fontSize: 9, color: accentColor, textTransform: "uppercase", letterSpacing: "0.13em", fontWeight: 700, marginBottom: 6 }}>{s.tagLabel}</div>}
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#111", lineHeight: 1.2 }}>{s.name}</div>
+                  </div>
+                  <button onClick={() => setDetailScenario(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#999", padding: 4 }}>✕</button>
+                </div>
+                <div style={{ display: "flex", gap: 20, marginTop: 14 }}>
+                  <div style={{ background: "#f5f5f2", borderRadius: 8, padding: "8px 14px" }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: "#16a34a" }}>{s.savedLives} lives</div>
+                    <div style={{ fontSize: 9, color: "#999" }}>saved every year</div>
+                  </div>
+                  <div style={{ background: "#f5f5f2", borderRadius: 8, padding: "8px 14px" }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: "#d97706" }}>{s.savedCost} NOK</div>
+                    <div style={{ fontSize: 9, color: "#999" }}>healthcare saved / year</div>
+                  </div>
+                  <div style={{ background: "#f5f5f2", borderRadius: 8, padding: "8px 14px" }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: "#666" }}>{s.cost} NOK</div>
+                    <div style={{ fontSize: 9, color: "#999" }}>one-time investment</div>
+                  </div>
+                  <div style={{ background: "#f5f5f2", borderRadius: 8, padding: "8px 14px" }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: "#666" }}>{s.timeline}</div>
+                    <div style={{ fontSize: 9, color: "#999" }}>until full effect</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ padding: "20px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+                {/* Summary */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Overview</div>
+                  <div style={{ fontSize: 13, color: "#444", lineHeight: 1.7 }}>{s.summary}</div>
+                </div>
+
+                {/* Mechanism */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Scientific mechanism</div>
+                  <div style={{ fontSize: 13, color: "#444", lineHeight: 1.7 }}>{s.mechanism}</div>
+                </div>
+
+                {/* Confidence */}
+                <div style={{ background: "#f9f9f7", borderRadius: 10, padding: 14, borderLeft: `3px solid ${s.confidence === "High" ? "#16a34a" : "#d97706"}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.1em" }}>Evidence confidence</div>
+                    <span style={{ background: s.confidence === "High" ? "#16a34a" : "#d97706", color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20, textTransform: "uppercase" }}>{s.confidence}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#555", lineHeight: 1.6 }}>{s.confidenceNote}</div>
+                </div>
+
+                {/* Two columns: populations + cobenefits */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Populations that benefit</div>
+                    {s.populations.map((p, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, marginBottom: 5, alignItems: "flex-start" }}>
+                        <div style={{ color: "#16a34a", marginTop: 1, flexShrink: 0 }}>✓</div>
+                        <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{p}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Co-benefits</div>
+                    {s.cobenefits.map((c, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, marginBottom: 5, alignItems: "flex-start" }}>
+                        <div style={{ color: "#6366f1", marginTop: 1, flexShrink: 0 }}>+</div>
+                        <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{c}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Risks */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Risks & uncertainties</div>
+                  {s.risks.map((r, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, marginBottom: 5, alignItems: "flex-start" }}>
+                      <div style={{ color: "#d97706", marginTop: 1, flexShrink: 0 }}>!</div>
+                      <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{r}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Sources */}
+                <div style={{ borderTop: "1px solid #eee", paddingTop: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Research sources</div>
+                  {s.sources.map((src, i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, marginBottom: 7, alignItems: "flex-start" }}>
+                      <div style={{ fontSize: 10, color: "#aaa", flexShrink: 0, paddingTop: 1 }}>[{i + 1}]</div>
+                      <div>
+                        <div style={{ fontSize: 12, color: "#333", fontWeight: 500 }}>{src.label}</div>
+                        <div style={{ fontSize: 10, color: "#aaa", fontFamily: "monospace" }}>{src.ref}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+          </div>
+            );
+          })()}
+          </>
         );
       }
+
       return null;
     }
 
