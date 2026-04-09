@@ -65,10 +65,8 @@
       const scale = 1 + Math.sin(breathPhase) * 0.03;
       const filter = [
         `saturate(${Math.max(0, 1 - damage * 5)})`,
-        `brightness(${1 - damage * 0.65})`,
-        `sepia(${Math.min(1, damage * 4)})`,
-        `contrast(${1 + damage * 0.9})`,
-        `hue-rotate(${damage * -50}deg)`,
+        `brightness(${1 - damage * 0.82})`,
+        `contrast(${1 + damage * 0.6})`,
       ].join(" ");
       return (
         <img
@@ -253,22 +251,23 @@
           </svg>
 
           {/* Lung cursor */}
-          {isOnMap && !dragging.current && (
+          {isOnMap && !dragging.current && (() => {
+            const d = hovered ? damage : 0;
+            return (
             <div style={{
               position: "absolute",
               left: mouseScreen.x, top: mouseScreen.y,
               transform: "translate(-50%, -50%)",
-              width: 80 + damage * 60, height: 80 + damage * 60,
+              width: 80 + d * 60, height: 80 + d * 60,
               pointerEvents: "none",
               zIndex: 2,
-              filter: damage > 0.3
-                ? `drop-shadow(0 0 ${20 + damage * 40}px rgba(220,30,30,${0.5 + damage * 0.5})) drop-shadow(0 0 ${8 + damage * 16}px rgba(220,30,30,0.9))`
-                : `drop-shadow(0 0 ${14 + damage * 10}px rgba(60,200,80,${0.3 + damage * 0.4}))`,
+              filter: "none",
               transition: "filter 0.3s, width 0.2s, height 0.2s"
             }}>
-              <LungSVG damage={damage} breathPhase={breathPhase} />
+              <LungSVG damage={d} breathPhase={breathPhase} />
             </div>
-          )}
+            );
+          })()}
 
           {/* Legend bar */}
           <div style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(8px)", borderRadius: 8, padding: "7px 12px", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.1)", zIndex: 10 }}>
