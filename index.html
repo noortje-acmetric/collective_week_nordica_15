@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Oslo Air Quality</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useRef, useEffect, useCallback } = React;
+
+    const NEIGHBORHOODS = [
+      { id: "groruddalen", name: "Groruddalen", lat: 59.9500, lng: 10.8500, pm25: 18.4, lifeYearsLost: 1.8, pop: 139000, children: 28000, elderly: 19000, hospVisits: 1240, healthCost: 510, description: "Heavy traffic corridor, industrial zones" },
+      { id: "sentrum", name: "Sentrum", lat: 59.9139, lng: 10.7522, pm25: 15.2, lifeYearsLost: 1.4, pop: 52000, children: 5200, elderly: 7800, hospVisits: 410, healthCost: 190, description: "City centre, diesel bus routes" },
+      { id: "gronland", name: "Grønland", lat: 59.9110, lng: 10.7680, pm25: 16.8, lifeYearsLost: 1.6, pop: 33000, children: 7200, elderly: 4100, hospVisits: 380, healthCost: 160, description: "Dense housing near major roads" },
+      { id: "alnabru", name: "Alnabru", lat: 59.9330, lng: 10.8400, pm25: 19.1, lifeYearsLost: 2.0, pop: 12000, children: 2100, elderly: 1800, hospVisits: 190, healthCost: 95, description: "Logistics hub, truck traffic" },
+      { id: "frogner", name: "Frogner", lat: 59.9220, lng: 10.7050, pm25: 8.2, lifeYearsLost: 0.4, pop: 58000, children: 8700, elderly: 11200, hospVisits: 210, healthCost: 74, description: "Residential, parks, low traffic" },
+      { id: "nordstrand", name: "Nordstrand", lat: 59.8650, lng: 10.7950, pm25: 7.1, lifeYearsLost: 0.3, pop: 52000, children: 9800, elderly: 8900, hospVisits: 160, healthCost: 53, description: "Suburban, coastal, cleaner air" },
+      { id: "sthanshaugen", name: "St. Hanshaugen", lat: 59.9250, lng: 10.7380, pm25: 11.3, lifeYearsLost: 0.9, pop: 38000, children: 5100, elderly: 5400, hospVisits: 290, healthCost: 117, description: "Mixed residential, moderate traffic" },
+      { id: "bjerke", name: "Bjerke", lat: 59.9420, lng: 10.8150, pm25: 14.6, lifeYearsLost: 1.2, pop: 34000, children: 7400, elderly: 4600, hospVisits: 360, healthCost: 148, description: "Near highways, wood burning in winter" },
+      { id: "ullern", name: "Ullern", lat: 59.9280, lng: 10.6480, pm25: 6.8, lifeYearsLost: 0.2, pop: 35000, children: 6200, elderly: 7100, hospVisits: 110, healthCost: 42, description: "Green, affluent, sheltered" },
+      { id: "sondrenordstrand", name: "Søndre Nordstrand", lat: 59.8400, lng: 10.8100, pm25: 12.4, lifeYearsLost: 1.0, pop: 39000, children: 9600, elderly: 4200, hospVisits: 340, healthCost: 138, description: "Mixed, near E6 highway" },
+    ];
+
+    const SCENARIOS = [
+      { id: "diesel", name: "Ban diesel in city centre", reduction: 0.3, cost: "130M", timeline: "2 years", savedLives: 45, savedCost: "295M", tag: "most_efficient", tagLabel: "Most cost-efficient" },
+      { id: "green", name: "Full green transport zone", reduction: 0.5, cost: "370M", timeline: "3–5 years", savedLives: 110, savedCost: "680M", tag: "recommended", tagLabel: "Recommended" },
+      { id: "woodburn", name: "Phase out wood burning", reduction: 0.2, cost: "85M", timeline: "4 years", savedLives: 30, savedCost: "170M", tag: null, tagLabel: null },
+      { id: "who", name: "Full WHO compliance plan", reduction: 0.7, cost: "850M", timeline: "8–10 years", savedLives: 185, savedCost: "1.2B", tag: "most_effective", tagLabel: "Most effective" },
+    ];
+
+    const WHO = 5;
+
+    function getLungDamage(pm25) { return Math.min(1, Math.max(0, (pm25 - WHO) / 18)); }
+
+    function interp(lat, lng, key) {
+      let tw = 0, tv = 0;
+      for (const n of NEIGHBORHOODS) {
+        const d = Math.max(0.0005, Math.hypot(lat - n.lat, lng - n.lng));
+        const w = 1 / (d * d); tw += w; tv += w * n[key];
+      }
+      return tv / tw;
+    }
+
+    function getNearest(lat, lng) {
+      let min = Infinity, best = null;
+      for (const n of NEIGHBORHOODS) {
+        const d = Math.hypot(lat - n.lat, lng - n.lng);
+        if (d < min) { min = d; best = n; }
+      }
+      return min < 0.025 ? best : null;
+    }
+
+    function LungSVG({ damage, breathPhase }) {
+      const sootOp = damage * 0.85;
+      const h = `rgb(${220 - damage * 140},${180 - damage * 120},${180 - damage * 100})`;
+      const dk = `rgb(${80 - damage * 50},${60 - damage * 40},${55 - damage * 35})`;
+      const c = damage < 0.3 ? h : dk;
+      const s = 1 + Math.sin(breathPhase) * 0.03;
+      const parts = [];
+      for (let i = 0; i < Math.floor(damage * 40); i++) {
+        const sd = i * 137.508;
+        parts.push(<circle key={i} cx={30 + (sd % 140)} cy={20 + ((sd * 2.3) % 120)} r={0.5 + (sd % 3) * 0.4} fill="#1a1a1a" opacity={0.15 + damage * 0.5} />);
+      }
+      return (
+        <svg viewBox="0 0 200 160" style={{ width: "100%", height: "100%", filter: `saturate(${1 - damage * 0.6})` }}>
+          <g transform={`translate(100,80) scale(${s}) translate(-100,-80)`}>
+            <rect x="94" y="5" width="12" height="35" rx="4" fill={c} opacity="0.9" />
+            <path d="M100 35 Q85 50 60 55" stroke={c} strokeWidth="8" fill="none" strokeLinecap="round" />
+            <path d="M100 35 Q115 50 140 55" stroke={c} strokeWidth="8" fill="none" strokeLinecap="round" />
+            <path d="M28 45 Q25 40 35 35 Q55 28 75 35 Q90 42 95 55 Q98 70 92 90 Q85 115 70 130 Q55 140 40 135 Q25 128 22 110 Q18 85 22 65 Z" fill={c} opacity="0.85" />
+            <path d="M28 45 Q25 40 35 35 Q55 28 75 35 Q90 42 95 55 Q98 70 92 90 Q85 115 70 130 Q55 140 40 135 Q25 128 22 110 Q18 85 22 65 Z" fill="#1a1a1a" opacity={sootOp} />
+            <path d="M172 45 Q175 40 165 35 Q145 28 125 35 Q110 42 105 55 Q102 70 108 90 Q115 115 130 130 Q145 140 160 135 Q175 128 178 110 Q182 85 178 65 Z" fill={c} opacity="0.85" />
+            <path d="M172 45 Q175 40 165 35 Q145 28 125 35 Q110 42 105 55 Q102 70 108 90 Q115 115 130 130 Q145 140 160 135 Q175 128 178 110 Q182 85 178 65 Z" fill="#1a1a1a" opacity={sootOp} />
+            <path d="M65 55 Q55 70 50 85" stroke={c} strokeWidth="3" fill="none" opacity="0.4" />
+            <path d="M135 55 Q145 70 150 85" stroke={c} strokeWidth="3" fill="none" opacity="0.4" />
+            {parts}
+          </g>
+        </svg>
+      );
+    }
+
+    // Mercator helpers
+    function lat2y(lat) { return Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2)); }
+    function y2lat(y) { return (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI; }
+
+    function latLngToPixel(lat, lng, centerLat, centerLng, zoom, w, h) {
+      const scale = (256 * Math.pow(2, zoom)) / (2 * Math.PI);
+      const cx = scale * (centerLng * Math.PI / 180);
+      const cy = scale * lat2y(centerLat);
+      const px = scale * (lng * Math.PI / 180);
+      const py = scale * lat2y(lat);
+      return { x: w / 2 + (px - cx), y: h / 2 - (py - cy) };
+    }
+
+    function pixelToLatLng(sx, sy, centerLat, centerLng, zoom, w, h) {
+      const scale = (256 * Math.pow(2, zoom)) / (2 * Math.PI);
+      const cx = scale * (centerLng * Math.PI / 180);
+      const cy = scale * lat2y(centerLat);
+      const px = cx + (sx - w / 2);
+      const py = cy - (sy - h / 2);
+      const lng = (px / scale) * 180 / Math.PI;
+      const lat = y2lat(py / scale);
+      return { lat, lng };
+    }
+
+    function MapView({ mouseScreen, setMouseScreen, isOnMap, setIsOnMap, hovered, setHovered, damage, breathPhase, rf, center, setCenter, zoom, setZoom, containerRef, w, h }) {
+      const dragging = useRef(false);
+      const lastPos = useRef({ x: 0, y: 0 });
+      const moved = useRef(false);
+      const leafletMapRef = useRef(null);
+      const tileContainerRef = useRef(null);
+
+      useEffect(() => {
+        if (!tileContainerRef.current || leafletMapRef.current) return;
+        const map = L.map(tileContainerRef.current, {
+          zoomControl: false,
+          dragging: false,
+          scrollWheelZoom: false,
+          keyboard: false,
+          doubleClickZoom: false,
+        });
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19,
+        }).addTo(map);
+        map.setView([center.lat, center.lng], Math.round(zoom));
+        leafletMapRef.current = map;
+        return () => { map.remove(); leafletMapRef.current = null; };
+      }, []);
+
+      useEffect(() => {
+        if (!leafletMapRef.current) return;
+        leafletMapRef.current.setView([center.lat, center.lng], Math.round(zoom), { animate: false });
+      }, [center.lat, center.lng, zoom]);
+
+      const handleMove = useCallback((e) => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        const sx = cx - rect.left;
+        const sy = cy - rect.top;
+
+        if (dragging.current) {
+          moved.current = true;
+          const dx = cx - lastPos.current.x;
+          const dy = cy - lastPos.current.y;
+          lastPos.current = { x: cx, y: cy };
+          const newCenter = pixelToLatLng(w / 2 - dx, h / 2 - dy, center.lat, center.lng, zoom, w, h);
+          setCenter({ lat: newCenter.lat, lng: newCenter.lng });
+          return;
+        }
+
+        setMouseScreen({ x: sx, y: sy });
+        const ll = pixelToLatLng(sx, sy, center.lat, center.lng, zoom, w, h);
+        setHovered(getNearest(ll.lat, ll.lng));
+      }, [containerRef, center, zoom, w, h, setCenter, setMouseScreen, setHovered]);
+
+      const handleWheel = useCallback((e) => {
+        e.preventDefault();
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const pivot = pixelToLatLng(mx, my, center.lat, center.lng, zoom, w, h);
+        const newZoom = Math.max(10, Math.min(16, zoom - e.deltaY * 0.002));
+        const pivotNewPx = latLngToPixel(pivot.lat, pivot.lng, center.lat, center.lng, newZoom, w, h);
+        const shiftX = pivotNewPx.x - mx;
+        const shiftY = pivotNewPx.y - my;
+        const newCenter = pixelToLatLng(w / 2 + shiftX, h / 2 + shiftY, center.lat, center.lng, newZoom, w, h);
+        setCenter({ lat: newCenter.lat, lng: newCenter.lng });
+        setZoom(newZoom);
+      }, [center, zoom, w, h, containerRef, setCenter, setZoom]);
+
+      const handleDown = useCallback((e) => {
+        dragging.current = true;
+        moved.current = false;
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        lastPos.current = { x: cx, y: cy };
+      }, []);
+
+      const handleUp = useCallback(() => { dragging.current = false; }, []);
+
+      useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const handler = (e) => handleWheel(e);
+        el.addEventListener("wheel", handler, { passive: false });
+        return () => el.removeEventListener("wheel", handler);
+      }, [handleWheel, containerRef]);
+
+      return (
+        <div
+          ref={containerRef}
+          onMouseMove={handleMove}
+          onTouchMove={handleMove}
+          onMouseEnter={() => setIsOnMap(true)}
+          onMouseLeave={() => { setIsOnMap(false); dragging.current = false; }}
+          onMouseDown={handleDown}
+          onMouseUp={handleUp}
+          onTouchStart={handleDown}
+          onTouchEnd={handleUp}
+          style={{ width: w, height: h, position: "relative", cursor: dragging.current ? "grabbing" : (isOnMap ? "none" : "default"), overflow: "hidden", background: "#e8e4d8" }}
+        >
+          {/* Map tiles */}
+          <div ref={tileContainerRef} style={{ position: "absolute", top: 0, left: 0, width: w, height: h }} />
+
+          {/* Heatmap overlay */}
+          <svg width={w} height={h} style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}>
+            <defs>
+              {NEIGHBORHOODS.map(n => {
+                const adj = n.pm25 * (1 - rf);
+                const intensity = Math.min(1, (adj - WHO) / 16);
+                const r = Math.round(60 + intensity * 200);
+                const g = Math.round(185 - intensity * 155);
+                const b = Math.round(80 - intensity * 50);
+                return (
+                  <radialGradient key={`g-${n.id}`} id={`grad-${n.id}`} cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor={`rgb(${r},${g},${b})`} stopOpacity="0.45" />
+                    <stop offset="70%" stopColor={`rgb(${r},${g},${b})`} stopOpacity="0.15" />
+                    <stop offset="100%" stopColor={`rgb(${r},${g},${b})`} stopOpacity="0" />
+                  </radialGradient>
+                );
+              })}
+            </defs>
+            {NEIGHBORHOODS.map(n => {
+              const pos = latLngToPixel(n.lat, n.lng, center.lat, center.lng, zoom, w, h);
+              const rad = Math.max(30, 60 * Math.pow(2, zoom - 12));
+              const isH = hovered?.id === n.id;
+              return (
+                <g key={n.id}>
+                  <circle cx={pos.x} cy={pos.y} r={rad} fill={`url(#grad-${n.id})`} />
+                  <circle cx={pos.x} cy={pos.y} r={5} fill={isH ? "#111" : "#666"} opacity={isH ? 0.9 : 0.5} />
+                  <text x={pos.x} y={pos.y - 9} textAnchor="middle" fill={isH ? "#111" : "#444"} fontSize={isH ? 12 : 11} fontWeight={isH ? 700 : 500} fontFamily="Inter,sans-serif" style={{ textShadow: "0 0 3px #fff, 0 0 6px #fff, 0 0 10px #fff" }}>
+                    {n.name}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* Lung cursor */}
+          {isOnMap && !dragging.current && (
+            <div style={{
+              position: "absolute",
+              left: mouseScreen.x, top: mouseScreen.y,
+              transform: "translate(-50%, -50%)",
+              width: 100, height: 85,
+              pointerEvents: "none",
+              filter: `drop-shadow(0 0 ${12 + damage * 20}px ${damage > 0.5 ? "rgba(200,50,50,0.35)" : "rgba(80,180,100,0.25)"})`,
+              transition: "filter 0.3s"
+            }}>
+              <LungSVG damage={damage} breathPhase={breathPhase} />
+            </div>
+          )}
+
+          {/* Legend bar */}
+          <div style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(8px)", borderRadius: 8, padding: "7px 12px", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.1)", zIndex: 10 }}>
+            <span style={{ fontSize: 10, color: "#888", fontWeight: 500 }}>Clean</span>
+            <div style={{ width: 90, height: 7, borderRadius: 4, background: "linear-gradient(to right, #4ade80, #a3e635, #facc15, #f97316, #ef4444)" }} />
+            <span style={{ fontSize: 10, color: "#888", fontWeight: 500 }}>Polluted</span>
+          </div>
+
+          {/* Zoom controls */}
+          <div style={{ position: "absolute", top: 80, right: 12, display: "flex", flexDirection: "column", gap: 1, zIndex: 10 }}>
+            <button onClick={() => setZoom(z => Math.min(16, z + 0.5))} style={{ width: 30, height: 30, background: "rgba(255,255,255,0.95)", border: "1px solid #ccc", borderRadius: "6px 6px 0 0", cursor: "pointer", fontSize: 16, color: "#333", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+            <button onClick={() => setZoom(z => Math.max(10, z - 0.5))} style={{ width: 30, height: 30, background: "rgba(255,255,255,0.95)", border: "1px solid #ccc", borderRadius: "0 0 6px 6px", cursor: "pointer", fontSize: 16, color: "#333", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+          </div>
+
+          {/* Data sources */}
+          <div style={{ position: "absolute", bottom: 12, left: 12, display: "flex", gap: 8, zIndex: 10 }}>
+            <a href="#" onClick={e => e.preventDefault()} style={{ fontSize: 9, color: "#6366f1", textDecoration: "underline", background: "rgba(255,255,255,0.88)", padding: "4px 8px", borderRadius: 4, backdropFilter: "blur(6px)" }}>FHI Health Registry</a>
+            <a href="#" onClick={e => e.preventDefault()} style={{ fontSize: 9, color: "#6366f1", textDecoration: "underline", background: "rgba(255,255,255,0.88)", padding: "4px 8px", borderRadius: 4, backdropFilter: "blur(6px)" }}>NILU Air Quality</a>
+            <a href="#" onClick={e => e.preventDefault()} style={{ fontSize: 9, color: "#6366f1", textDecoration: "underline", background: "rgba(255,255,255,0.88)", padding: "4px 8px", borderRadius: 4, backdropFilter: "blur(6px)" }}>SSB Demographics</a>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [screen, setScreen] = useState("explore");
+      const [mouseScreen, setMouseScreen] = useState({ x: 0, y: 0 });
+      const [hovered, setHovered] = useState(null);
+      const [breathPhase, setBreathPhase] = useState(0);
+      const [isOnMap, setIsOnMap] = useState(false);
+      const [selectedScenario, setSelectedScenario] = useState(null);
+      const [center1, setCenter1] = useState({ lat: 59.915, lng: 10.76 });
+      const [zoom1, setZoom1] = useState(12);
+      const [center2, setCenter2] = useState({ lat: 59.915, lng: 10.76 });
+      const [zoom2, setZoom2] = useState(12);
+      const [dims, setDims] = useState({ w: 800, h: 600 });
+      const containerRef = useRef(null);
+      const containerRef2 = useRef(null);
+      const outerRef = useRef(null);
+
+      useEffect(() => {
+        const st = Date.now();
+        let af;
+        const tick = () => { setBreathPhase((Date.now() - st) / 500); af = requestAnimationFrame(tick); };
+        af = requestAnimationFrame(tick); return () => cancelAnimationFrame(af);
+      }, []);
+
+      useEffect(() => {
+        const measure = () => {
+          if (!outerRef.current) return;
+          const r = outerRef.current.getBoundingClientRect();
+          const sw = Math.floor(r.width * 0.30);
+          setDims({ w: Math.floor(r.width) - sw, h: Math.floor(r.height) });
+        };
+        measure(); window.addEventListener("resize", measure);
+        return () => window.removeEventListener("resize", measure);
+      }, []);
+
+      const curCenter = screen === "act" ? center2 : center1;
+      const curZoom = screen === "act" ? zoom2 : zoom1;
+      const ll = pixelToLatLng(mouseScreen.x, mouseScreen.y, curCenter.lat, curCenter.lng, curZoom, dims.w, dims.h);
+      const rf = screen === "act" && selectedScenario ? selectedScenario.reduction : 0;
+      const currentLY = interp(ll.lat, ll.lng, "lifeYearsLost");
+      const currentHC = interp(ll.lat, ll.lng, "healthCost");
+      const currentPM = interp(ll.lat, ll.lng, "pm25");
+      const adjPM = currentPM * (1 - rf);
+      const damage = getLungDamage(adjPM);
+      const adjLY = currentLY * (1 - rf);
+      const adjHC = currentHC * (1 - rf);
+      const totalHosp = NEIGHBORHOODS.reduce((s, n) => s + n.hospVisits, 0);
+      const totalHC = NEIGHBORHOODS.reduce((s, n) => s + n.healthCost, 0);
+      const cardBg = "#f5f5f2";
+
+      if (screen === "explore") {
+        return (
+          <div ref={outerRef} style={{ height: "100vh", display: "flex", background: "#fafaf8", fontFamily: "'Inter',-apple-system,sans-serif", color: "#111", overflow: "hidden" }}>
+            <div style={{ flex: 1, position: "relative" }}>
+              <MapView mouseScreen={mouseScreen} setMouseScreen={setMouseScreen} isOnMap={isOnMap} setIsOnMap={setIsOnMap} hovered={hovered} setHovered={setHovered} damage={damage} breathPhase={breathPhase} rf={0} center={center1} setCenter={setCenter1} zoom={zoom1} setZoom={setZoom1} containerRef={containerRef} w={dims.w} h={dims.h} />
+              <div style={{ position: "absolute", top: 16, left: 16, maxWidth: 290, pointerEvents: "none", background: "rgba(255,255,255,0.92)", backdropFilter: "blur(12px)", borderRadius: 10, padding: "14px 18px", boxShadow: "0 1px 6px rgba(0,0,0,0.08)", zIndex: 10 }}>
+                <div style={{ fontSize: 9, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4, fontWeight: 600 }}>Oslo today</div>
+                <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3, color: "#222" }}>Move the lungs to see what you are breathing</div>
+                <div style={{ fontSize: 11, color: "#999", marginTop: 3 }}>If you do nothing, this is what stays.</div>
+              </div>
+            </div>
+            <div style={{ width: "30%", minWidth: 250, borderLeft: "1px solid #e8e8e4", background: "#fff", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+              <div style={{ padding: "16px 16px 0" }}>
+                <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3, fontWeight: 500 }}>{hovered ? hovered.name : "Hover a neighbourhood"}</div>
+                {hovered && <div style={{ fontSize: 11, color: "#888", marginBottom: 10 }}>{hovered.description}</div>}
+              </div>
+              <div style={{ padding: "0 16px", display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ background: cardBg, borderRadius: 10, padding: 14 }}>
+                  <div style={{ fontSize: 9, color: "#999", fontWeight: 500 }}>Life expectancy impact</div>
+                  <div style={{ fontSize: 32, fontWeight: 700, marginTop: 2, color: currentLY > 1 ? "#dc2626" : (currentLY > 0.5 ? "#d97706" : "#16a34a"), fontVariantNumeric: "tabular-nums" }}>
+                    −{currentLY.toFixed(1)} <span style={{ fontSize: 12, color: "#999", fontWeight: 400 }}>years</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: "#aaa", marginTop: 1 }}>Average life shortened by this air</div>
+                </div>
+                <div style={{ background: cardBg, borderRadius: 10, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <div style={{ fontSize: 9, color: "#999", fontWeight: 500 }}>Annual health costs</div>
+                    {hovered && <div style={{ fontSize: 9, color: "#bbb" }}>{hovered.name}</div>}
+                  </div>
+                  <div style={{ fontSize: 32, fontWeight: 700, marginTop: 2, color: "#d97706", fontVariantNumeric: "tabular-nums" }}>
+                    {currentHC.toFixed(0)} <span style={{ fontSize: 12, color: "#999", fontWeight: 400 }}>MNOK</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: "#aaa", marginTop: 1 }}>Hospital visits, treatment, lost productivity</div>
+                </div>
+                {hovered && (
+                  <div style={{ background: cardBg, borderRadius: 10, padding: 14 }}>
+                    <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8, fontWeight: 500 }}>Who lives in {hovered.name}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                      <div><div style={{ fontSize: 18, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{(hovered.pop / 1000).toFixed(0)}k</div><div style={{ fontSize: 9, color: "#999" }}>residents</div></div>
+                      <div><div style={{ fontSize: 18, fontWeight: 600, color: "#d97706", fontVariantNumeric: "tabular-nums" }}>{(hovered.children / 1000).toFixed(1)}k</div><div style={{ fontSize: 9, color: "#999" }}>children</div></div>
+                      <div><div style={{ fontSize: 18, fontWeight: 600, color: "#dc2626", fontVariantNumeric: "tabular-nums" }}>{hovered.hospVisits}</div><div style={{ fontSize: 9, color: "#999" }}>hospital visits/yr</div></div>
+                      <div><div style={{ fontSize: 18, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{(hovered.elderly / 1000).toFixed(1)}k</div><div style={{ fontSize: 9, color: "#999" }}>elderly (65+)</div></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div style={{ marginTop: "auto", padding: 16 }}>
+                <div style={{ background: "#f0f0ec", borderRadius: 10, padding: 14, marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6, fontWeight: 500 }}>Oslo — total cost of inaction</div>
+                  <div style={{ display: "flex", gap: 16 }}>
+                    <div><div style={{ fontSize: 20, fontWeight: 700, color: "#dc2626" }}>{totalHosp.toLocaleString()}</div><div style={{ fontSize: 9, color: "#999" }}>hospital visits/yr</div></div>
+                    <div><div style={{ fontSize: 20, fontWeight: 700, color: "#d97706" }}>{totalHC} MNOK</div><div style={{ fontSize: 9, color: "#999" }}>health cost/yr</div></div>
+                  </div>
+                </div>
+                <button onClick={() => { setScreen("act"); setSelectedScenario(SCENARIOS[1]); }} style={{
+                  width: "100%", background: "#111", color: "#fff", border: "none", borderRadius: 10,
+                  padding: "14px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer"
+                }}>What if you act now? →</button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      if (screen === "act") {
+        const sc = selectedScenario || SCENARIOS[1];
+        return (
+          <div ref={outerRef} style={{ height: "100vh", display: "flex", background: "#fafaf8", fontFamily: "'Inter',-apple-system,sans-serif", color: "#111", overflow: "hidden" }}>
+            <div style={{ flex: 1, position: "relative" }}>
+              <MapView mouseScreen={mouseScreen} setMouseScreen={setMouseScreen} isOnMap={isOnMap} setIsOnMap={setIsOnMap} hovered={hovered} setHovered={setHovered} damage={damage} breathPhase={breathPhase} rf={sc.reduction} center={center2} setCenter={setCenter2} zoom={zoom2} setZoom={setZoom2} containerRef={containerRef2} w={dims.w} h={dims.h} />
+              <div style={{ position: "absolute", top: 16, left: 16, maxWidth: 290, pointerEvents: "none", background: "rgba(255,255,255,0.92)", backdropFilter: "blur(12px)", borderRadius: 10, padding: "14px 18px", boxShadow: "0 1px 6px rgba(0,0,0,0.08)", zIndex: 10 }}>
+                <div style={{ fontSize: 9, color: "#16a34a", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4, fontWeight: 600 }}>What changes</div>
+                <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3, color: "#222" }}>{sc.name}</div>
+                <div style={{ fontSize: 11, color: "#999", marginTop: 3 }}>Move the lungs again — see the difference.</div>
+              </div>
+              <button onClick={() => setScreen("explore")} style={{
+                position: "absolute", top: 16, right: 50, background: "rgba(255,255,255,0.92)", border: "1px solid #ddd",
+                color: "#555", borderRadius: 8, padding: "7px 14px", fontSize: 11, cursor: "pointer", zIndex: 10
+              }}>← Back to current state</button>
+            </div>
+            <div style={{ width: "30%", minWidth: 250, borderLeft: "1px solid #e8e8e4", background: "#fff", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+              <div style={{ padding: 16 }}>
+                <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3, fontWeight: 500 }}>Choose a path forward</div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#222" }}>Select a scenario to see its impact</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {SCENARIOS.map(s => {
+                    const isSel = sc.id === s.id;
+                    const bc = isSel ? (s.tag === "recommended" ? "#16a34a" : (s.tag === "most_effective" ? "#6366f1" : (s.tag === "most_efficient" ? "#d97706" : "#111"))) : "#e5e5e0";
+                    return (
+                      <button key={s.id} onClick={() => setSelectedScenario(s)} style={{
+                        background: isSel ? "#f7f7f5" : "#fff", border: `2px solid ${bc}`,
+                        borderRadius: 10, padding: "12px 14px", cursor: "pointer",
+                        textAlign: "left", color: "#111", transition: "all 0.2s", position: "relative"
+                      }}>
+                        {s.tag && <span style={{
+                          position: "absolute", top: -8, right: 10,
+                          background: s.tag === "recommended" ? "#16a34a" : (s.tag === "most_effective" ? "#6366f1" : "#d97706"),
+                          color: "#fff", fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3, textTransform: "uppercase"
+                        }}>{s.tagLabel}</span>}
+                        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{s.name}</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+                          <div><div style={{ fontSize: 16, fontWeight: 700, color: "#16a34a" }}>{s.savedLives}</div><div style={{ fontSize: 9, color: "#999" }}>lives saved/yr</div></div>
+                          <div><div style={{ fontSize: 16, fontWeight: 700, color: "#d97706" }}>{s.savedCost} NOK</div><div style={{ fontSize: 9, color: "#999" }}>healthcare saved</div></div>
+                          <div><div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{s.cost} NOK</div><div style={{ fontSize: 9, color: "#999" }}>investment</div></div>
+                          <div><div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{s.timeline}</div><div style={{ fontSize: 9, color: "#999" }}>to implement</div></div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {hovered && (
+                <div style={{ padding: "0 16px 10px" }}>
+                  <div style={{ background: cardBg, borderRadius: 10, padding: 12 }}>
+                    <div style={{ fontSize: 9, color: "#999", marginBottom: 4, fontWeight: 500 }}>{hovered.name} — with this action</div>
+                    <div style={{ display: "flex", gap: 16, alignItems: "baseline" }}>
+                      <div>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: adjLY > 1 ? "#dc2626" : (adjLY > 0.5 ? "#d97706" : "#16a34a"), fontVariantNumeric: "tabular-nums" }}>−{adjLY.toFixed(1)}<span style={{ fontSize: 10, color: "#999", fontWeight: 400 }}> yrs</span></div>
+                        <div style={{ fontSize: 9, color: "#999" }}>life expectancy</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: "#d97706", fontVariantNumeric: "tabular-nums" }}>{adjHC.toFixed(0)}<span style={{ fontSize: 10, color: "#999", fontWeight: 400 }}> MNOK</span></div>
+                        <div style={{ fontSize: 9, color: "#999" }}>health cost</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div style={{ marginTop: "auto", padding: "0 16px 12px" }}>
+                <div style={{ fontSize: 9, color: "#bbb", lineHeight: 1.5, paddingTop: 10, borderTop: "1px solid #eee" }}>
+                  Prototype · illustrative data · Real deployment uses live monitoring, FHI registries, SSB demographics.
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      return null;
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
