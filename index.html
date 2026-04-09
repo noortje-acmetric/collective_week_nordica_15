@@ -34,6 +34,23 @@
 
     const SCENARIOS = [
       {
+        id: "donothing", name: "Do nothing", reduction: 0, cost: "0", timeline: "—",
+        savedLives: 0, savedCost: "0", tag: "baseline", tagLabel: "Current situation",
+        summary: "No policy intervention. Air quality remains at current measured levels. This is the reference state against which all other scenarios are compared.",
+        mechanism: "Oslo's current PM2.5 levels are driven by diesel traffic (approx. 45%), residential wood burning (approx. 40%), and industrial/secondary sources (approx. 15%), based on NILU source apportionment data from 2023.",
+        confidence: "High",
+        confidenceNote: "Current pollution levels are directly measured by NILU's continuous monitoring network across Oslo. Baseline health impact estimates are derived from FHI registry data cross-referenced with residential address and diagnosis records.",
+        populations: ["All 700,000+ Oslo residents", "Groruddalen and Alnabru residents face highest exposure", "Children in 47 schools with above-WHO air quality", "Elderly with pre-existing cardiovascular or respiratory conditions"],
+        cobenefits: [],
+        risks: ["Air quality is projected to worsen without intervention as population grows", "EU Clean Air Directive compliance deadline: 2030", "Climate change may intensify inversion events, increasing peak PM2.5 episodes"],
+        sources: [
+          { label: "NILU: Air Quality Monitoring Oslo 2023", ref: "NILU OR 4/2024" },
+          { label: "FHI: Norwegian Health Registry — Respiratory and Cardiovascular Outcomes", ref: "FHI IS-3021, 2022" },
+          { label: "SSB: Population and Housing Census Oslo", ref: "SSB 2023" },
+          { label: "EEA: Air Quality Status Report Norway", ref: "EEA NOR-2023" },
+        ],
+      },
+      {
         id: "diesel", name: "Ban diesel in city centre", reduction: 0.3, cost: "130M", timeline: "2 years",
         savedLives: 45, savedCost: "295M", tag: "most_efficient", tagLabel: "Most cost-efficient",
         summary: "Prohibiting diesel vehicles from the city centre ring road reduces PM2.5 concentrations by an estimated 30%, based on observed outcomes from comparable urban restrictions in London, Brussels and Stockholm.",
@@ -515,7 +532,7 @@
               </div>
               <div style={{ marginTop: "auto", padding: 16 }}>
                 <button
-                  onClick={() => { setScreen("act"); setSelectedScenario(SCENARIOS[1]); }}
+                  onClick={() => { setScreen("act"); setSelectedScenario(SCENARIOS.find(s => s.id === "donothing")); }}
                   onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
                   onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
                   style={{
@@ -539,7 +556,7 @@
       }
 
       if (screen === "act") {
-        const sc = selectedScenario || SCENARIOS[1];
+        const sc = selectedScenario || SCENARIOS.find(s => s.id === "donothing");
         return (
           <>
           <div ref={outerRef} style={{ height: "100vh", display: "flex", background: "#fafaf8", fontFamily: "'Inter',-apple-system,sans-serif", color: "#111", overflow: "hidden" }}>
@@ -589,32 +606,38 @@
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {SCENARIOS.map(s => {
                     const isSel = sc.id === s.id;
-                    const bc = isSel ? (s.tag === "recommended" ? "#16a34a" : (s.tag === "most_effective" ? "#6366f1" : (s.tag === "most_efficient" ? "#d97706" : (s.tag === "baseline" ? "#9ca3af" : "#111")))) : "#e5e5e0";
+                    const isBaseline = s.tag === "baseline";
+                    const accentColor = s.tag === "recommended" ? "#16a34a" : s.tag === "most_effective" ? "#6366f1" : s.tag === "most_efficient" ? "#d97706" : "#6b7280";
+                    const bc = isSel ? accentColor : "#e5e5e0";
                     return (
                       <button key={s.id} onClick={() => setSelectedScenario(s)} style={{
-                        background: isSel ? "#f7f7f5" : "#fff", border: `2px solid ${bc}`,
+                        background: isBaseline ? (isSel ? "#f3f4f6" : "#fafafa") : (isSel ? "#f7f7f5" : "#fff"),
+                        border: `2px solid ${bc}`,
                         borderRadius: 10, padding: "12px 14px", cursor: "pointer",
-                        textAlign: "left", color: "#111", transition: "all 0.2s", position: "relative"
+                        textAlign: "left", color: isBaseline ? "#6b7280" : "#111",
+                        transition: "all 0.2s", position: "relative",
                       }}>
                         {s.tag && <span style={{
                           position: "absolute", top: -8, right: 10,
-                          background: s.tag === "recommended" ? "#16a34a" : (s.tag === "most_effective" ? "#6366f1" : (s.tag === "most_efficient" ? "#d97706" : "#9ca3af")),
+                          background: accentColor,
                           color: "#fff", fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 3, textTransform: "uppercase"
                         }}>{s.tagLabel}</span>}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, flex: 1, paddingRight: 6 }}>{s.name}</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: isBaseline ? 0 : 6 }}>
+                          <div style={{ fontSize: 13, fontWeight: isBaseline ? 500 : 600, flex: 1, paddingRight: 6 }}>{s.name}</div>
                           <button
                             onClick={e => { e.stopPropagation(); setDetailScenario(s); }}
                             style={{ background: "#f0f0ec", border: "none", borderRadius: 20, width: 20, height: 20, fontSize: 11, cursor: "pointer", color: "#666", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}
                             title="View research details"
                           >i</button>
                         </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-                          <div><div style={{ fontSize: 16, fontWeight: 700, color: "#16a34a" }}>{s.savedLives}</div><div style={{ fontSize: 9, color: "#999" }}>lives saved every year</div></div>
-                          <div><div style={{ fontSize: 16, fontWeight: 700, color: "#16a34a" }}>{s.savedCost} NOK</div><div style={{ fontSize: 9, color: "#999" }}>healthcare saved / year</div></div>
-                          <div><div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{s.cost} NOK</div><div style={{ fontSize: 9, color: "#999" }}>one-time investment</div></div>
-                          <div><div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{s.timeline}</div><div style={{ fontSize: 9, color: "#999" }}>until full effect</div></div>
-                        </div>
+                        {!isBaseline && (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+                            <div><div style={{ fontSize: 16, fontWeight: 700, color: "#16a34a" }}>{s.savedLives}</div><div style={{ fontSize: 9, color: "#999" }}>lives saved every year</div></div>
+                            <div><div style={{ fontSize: 16, fontWeight: 700, color: "#16a34a" }}>{s.savedCost} NOK</div><div style={{ fontSize: 9, color: "#999" }}>healthcare saved / year</div></div>
+                            <div><div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{s.cost} NOK</div><div style={{ fontSize: 9, color: "#999" }}>one-time investment</div></div>
+                            <div><div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{s.timeline}</div><div style={{ fontSize: 9, color: "#999" }}>until full effect</div></div>
+                          </div>
+                        )}
                       </button>
                     );
                   })}
