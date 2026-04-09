@@ -95,63 +95,37 @@ function pixelToLatLng(sx, sy, centerLat, centerLng, zoom, w, h) {
   return { lat, lng };
 }
 
-function TileLayer({ centerLat, centerLng, zoom, w, h }) {
-  const z = Math.round(zoom);
-  const n = Math.pow(2, z);
-  const tileSize = 256 * Math.pow(2, zoom - z);
-  const worldPx = tileSize * n;
-
-  const cxWorld = ((centerLng + 180) / 360) * worldPx;
-  const latRad = centerLat * Math.PI / 180;
-  const cyWorld = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * worldPx;
-
-  const tlx = cxWorld - w / 2;
-  const tly = cyWorld - h / 2;
-
-  const startCol = Math.floor(tlx / tileSize);
-  const endCol = Math.ceil((tlx + w) / tileSize);
-  const startRow = Math.floor(tly / tileSize);
-  const endRow = Math.ceil((tly + h) / tileSize);
-
-  const tiles = [];
-  for (let col = startCol; col <= endCol; col++) {
-    for (let row = startRow; row <= endRow; row++) {
-      if (row < 0 || row >= n) continue;
-      const wrappedCol = ((col % n) + n) % n;
-      const left = col * tileSize - tlx;
-      const top = row * tileSize - tly;
-      tiles.push(
-        <img
-          key={`${z}-${col}-${row}`}
-          src={`https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png`}
-          alt=""
-          style={{ display: "none" }}
-        />
-      );
-      tiles.push(
-        <div
-          key={`tile-${z}-${col}-${row}`}
-          style={{
-            position: "absolute",
-            left: Math.round(left),
-            top: Math.round(top),
-            width: Math.ceil(tileSize) + 1,
-            height: Math.ceil(tileSize) + 1,
-            backgroundImage: `url(https://tile.openstreetmap.org/${z}/${wrappedCol}/${row}.png)`,
-            backgroundSize: "cover",
-            imageRendering: "auto",
-          }}
-        />
-      );
-    }
-  }
-  return <>{tiles}</>;
-}
 
 function MapView({ mouseScreen, setMouseScreen, isOnMap, setIsOnMap, hovered, setHovered, damage, breathPhase, rf, center, setCenter, zoom, setZoom, containerRef, w, h }) {
   const dragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const moved = useRef(false);
+  const leafletMapRef = useRef(null);
+  const tileContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (!tileContainerRef.current || leafletMapRef.current) return;
+    const map = L.map(tileContainerRef.current, {
+      zoomControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      keyboard: false,
+      doubleClickZoom: false,
+    });
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+    map.setView([center.lat, center.lng], Math.round(zoom));
+    leafletMapRef.current = map;
+    return () => { map.remove(); leafletMapRef.current = null; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!leafletMapRef.current) return;
+    leafletMapRef.current.setView([center.lat, center.lng], Math.round(zoom), { animate: false });
+  }, [center.lat, center.lng, zoom]);
 
   const handleMove = useCallback((e) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -226,9 +200,7 @@ function MapView({ mouseScreen, setMouseScreen, isOnMap, setIsOnMap, hovered, se
       style={{ width: w, height: h, position: "relative", cursor: dragging.current ? "grabbing" : (isOnMap ? "none" : "default"), overflow: "hidden", background: "#e8e4d8" }}
     >
       {/* Map tiles */}
-      <div style={{ position: "absolute", top: 0, left: 0, width: w, height: h, overflow: "hidden" }}>
-        <TileLayer centerLat={center.lat} centerLng={center.lng} zoom={zoom} w={w} h={h} />
-      </div>
+      <div ref={tileContainerRef} style={{ position: "absolute", top: 0, left: 0, width: w, height: h }} />
 
       {/* Heatmap overlay */}
       <svg width={w} height={h} style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}>
